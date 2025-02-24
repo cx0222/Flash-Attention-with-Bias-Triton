@@ -2,6 +2,8 @@
 
 A Triton implementation of Flash Attention with differential bias support. This implementation is inspired by the original [Flash Attention paper](https://arxiv.org/abs/2205.14135).
 
+<img width="930" alt="image" src="https://github.com/user-attachments/assets/1867cc22-1c8c-4517-9a82-3450355dfdeb" />
+
 ## Features
 
 - ⚡ Efficient Flash Attention implementation with Triton
