@@ -27,7 +27,7 @@ pip install torch triton
 
 ```python
 import torch
-from flashattn_triton import flash_attn_w_bias
+from flash_attn_w_bias import flash_attn_w_bias
 
 # Create input tensors
 batch_size, seq_len, n_heads, head_dim = 2, 1024, 8, 64
