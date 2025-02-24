@@ -44,6 +44,11 @@ output = flash_attn_w_bias(q, k, v, bias, causal=False)
 
 The implementation shows significant speedups compared to standard PyTorch attention, especially for longer sequence lengths:
 
+
+![Forward Pass Performance](attention-comparison-batch2-head4-d32-fwd.png)
+![Backward Pass Performance](attention-comparison-batch2-head4-d32-bwd.png)
+
+
 ```
 attention-comparison-batch2-head4-d32-fwd:
       len  Triton-Attn-Bias (FLOPS)  PyTorch-Attn-Bias (FLOPS)
