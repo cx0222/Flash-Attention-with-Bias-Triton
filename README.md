@@ -1,4 +1,4 @@
-# FlashIPA: Flash Attention Implementation in PyTorch and Triton
+#Flash Attention w. Bias Implementation in PyTorch and Triton
 
 A Triton implementation of Flash Attention with differential bias support. This implementation is inspired by the original [Flash Attention paper](https://arxiv.org/abs/2205.14135).
 
