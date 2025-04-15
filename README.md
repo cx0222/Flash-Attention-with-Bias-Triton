@@ -80,7 +80,7 @@ For best performance:
 
 ## Running Tests and Benchmarks
 
-```python
+```bash
 # Run correctness tests
 python flashattn_triton.py
 
