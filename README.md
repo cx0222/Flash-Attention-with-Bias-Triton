@@ -29,7 +29,7 @@ pip install torch triton
 
 ```python
 import torch
-from flash_attn_w_bias import flash_attn_w_bias
+from flash_attn_w_bias import attention_triton
 
 # Create input tensors
 batch_size, seq_len, n_heads, head_dim = 2, 1024, 8, 64
@@ -39,7 +39,7 @@ v = torch.randn_like(q)
 bias = torch.randn(batch_size, n_heads, seq_len, seq_len, device='cuda', dtype=torch.float16)
 
 # Run Flash Attention
-output = flash_attn_w_bias(q, k, v, bias, causal=False)
+output = attention_triton(q, k, v, bias, causal=False)
 ```
 
 ## Performance
