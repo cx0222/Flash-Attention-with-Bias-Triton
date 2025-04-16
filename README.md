@@ -17,6 +17,7 @@ A Triton implementation of Flash Attention with differential bias support. This 
 - Python 
 - PyTorch
 - Triton
+- xFormers
 - CUDA-capable GPU (tested on A100)
 
 ## Installation
@@ -29,7 +30,7 @@ pip install torch triton
 
 ```python
 import torch
-from flash_attn_w_bias import attention_triton
+from attention_func import attention_triton
 
 # Create input tensors
 batch_size, seq_len, n_heads, head_dim = 2, 1024, 8, 64

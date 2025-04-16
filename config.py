@@ -24,9 +24,27 @@ test_configs = [
         x_names=["len"],
         x_vals=list(2 ** i for i in range(8, 15)),
         line_arg="provider",
-        line_vals=["triton-attn-bias", "torch-attn-bias", "torch-sdpa"],
-        line_names=["Triton-Attn-Bias (FLOPS)", "PyTorch-Attn-Bias (FLOPS)", "PyTorch-SDPA (FLOPS)"],
-        styles=[("red", "-"), ("blue", "--"), ("green", ":")],
+        line_vals=[
+            "triton-attn-bias",
+            "torch-attn-bias",
+            "torch-compiled-attn-bias",
+            "xformers-attn-bias",
+            "torch-sdpa"
+        ],
+        line_names=[
+            "Triton-Attn-Bias (FLOPS)",
+            "PyTorch-Attn-Bias (FLOPS)",
+            "PyTorch-Compiled-Attn-Bias (FLOPS)",
+            "xFormers-Attn-Bias (FLOPS)",
+            "PyTorch-SDPA (FLOPS)"
+        ],
+        styles=[
+            ("red", "-"),
+            ("blue", "--"),
+            ("cyan", "-."),
+            ("orange", "-."),
+            ("green", ":")
+        ],
         ylabel="TFLOPS",  # Changed from Time (ms) to TFLOPS
         plot_name=f"attention-comparison-batch{BATCH}-head{N_HEADS}-d{HEAD_DIM}-{mode}",
         args={

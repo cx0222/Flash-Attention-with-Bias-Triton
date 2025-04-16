@@ -12,7 +12,8 @@ import torch
 import triton
 
 from config import test_configs
-from attention_func import attention_triton, attention_torch, attention_sdpa
+from attention_func import attention_triton, attention_torch, attention_torch_compiled, attention_sdpa, \
+    attention_xformers
 
 
 @triton.testing.perf_report(test_configs)
@@ -74,6 +75,28 @@ def bench_attention_comparison(BATCH, H, len, HEAD_DIM, mode, provider, device="
         v.grad = None
         bias.grad = None
 
+    def forward_backward_torch_compiled():
+        out = attention_torch_compiled(q, k, v, sm_scale, bias)
+        loss = (0 - out.sum())
+        loss.backward()
+        torch.cuda.synchronize()
+        # Reset gradients for next iteration
+        q.grad = None
+        k.grad = None
+        v.grad = None
+        bias.grad = None
+
+    def forward_backward_xformers():
+        out = attention_xformers(q, k, v, sm_scale, bias)
+        loss = (0 - out.sum())
+        loss.backward()
+        torch.cuda.synchronize()
+        # Reset gradients for next iteration
+        q.grad = None
+        k.grad = None
+        v.grad = None
+        bias.grad = None
+
     def forward_backward_sdpa():
         out = attention_sdpa(q, k, v, sm_scale, bias)
         loss = (0 - out.sum())
@@ -90,15 +113,29 @@ def bench_attention_comparison(BATCH, H, len, HEAD_DIM, mode, provider, device="
             fn = lambda: attention_triton(q, k, v, bias, False, sm_scale)
         elif provider == "torch-attn-bias":
             fn = lambda: attention_torch(q, k, v, sm_scale, bias)
-        else:  # provider == "torch-sdpa"
+        elif provider == "torch-compiled-attn-bias":
+            fn = lambda: attention_torch_compiled(q, k, v, sm_scale, bias)
+        elif provider == "xformers-attn-bias":
+            fn = lambda: attention_xformers(q, k, v, sm_scale, bias)
+        elif provider == "torch-sdpa":
             fn = lambda: attention_sdpa(q, k, v, sm_scale, bias)
-    else:  # mode == "bwd"
+        else:
+            raise Exception("Invalid provider \"{}\"".format(provider))
+    elif mode == "bwd":
         if provider == "triton-attn-bias":
             fn = forward_backward_triton
         elif provider == "torch-attn-bias":
             fn = forward_backward_torch
-        else:  # provider == "torch-sdpa"
+        elif provider == "torch-compiled-attn-bias":
+            fn = forward_backward_torch_compiled
+        elif provider == "xformers-attn-bias":
+            fn = forward_backward_xformers
+        elif provider == "torch-sdpa":
             fn = forward_backward_sdpa
+        else:
+            raise Exception("Invalid provider \"{}\"".format(provider))
+    else:
+        raise Exception("Invalid mode \"{}\"".format(mode))
 
     # Run benchmark
     ms = triton.testing.do_bench(fn)
@@ -150,10 +187,14 @@ def test_attention_correctness():
     # Compute outputs
     o_flash = attention_triton(q, k, v, bias, causal, softmax_scale)
     o_torch = attention_torch(q, k, v, softmax_scale, bias)
+    o_torch_compiled = attention_torch_compiled(q, k, v, softmax_scale, bias)
+    o_xformers = attention_xformers(q, k, v, softmax_scale, bias)
     o_sdpa = attention_sdpa(q, k, v, softmax_scale, bias)
 
     # Compute max forward errors
     max_forward_error_torch = torch.abs(o_flash - o_torch).max().item()
+    max_forward_error_torch_compiled = torch.abs(o_flash - o_torch_compiled).max().item()
+    max_forward_error_xformers = torch.abs(o_flash - o_xformers).max().item()
     max_forward_error_sdpa = torch.abs(o_flash - o_sdpa).max().item()
 
     # Compute loss and backpropagate for flash attention
@@ -174,6 +215,26 @@ def test_attention_correctness():
     for x in [q, k, v, bias]:
         x.grad = None
 
+    # Compute loss and backpropagate for torch compiled attention
+    loss_torch_compiled = (0 - o_torch_compiled.sum())
+    loss_torch_compiled.backward()
+    dq_torch_compiled, dk_torch_compiled, dv_torch_compiled, dbias_torch_compiled \
+        = [x.grad.clone() for x in [q, k, v, bias]]
+
+    # Reset gradients
+    for x in [q, k, v, bias]:
+        x.grad = None
+
+    # Compute loss and backpropagate for xformers attention
+    loss_xformers = (0 - o_xformers.sum())
+    loss_xformers.backward()
+    dq_torch_xformers, dk_torch_xformers, dv_torch_xformers, dbias_torch_xformers \
+        = [x.grad.clone() for x in [q, k, v, bias]]
+
+    # Reset gradients
+    for x in [q, k, v, bias]:
+        x.grad = None
+
     # Compute loss and backpropagate for SDPA
     loss_sdpa = (0 - o_sdpa.sum())
     loss_sdpa.backward()
@@ -187,6 +248,22 @@ def test_attention_correctness():
         "bias": torch.abs(dbias_flash - dbias_torch).max().item(),
     }
 
+    # Compute max gradient errors against torch compiled implementation
+    max_grad_errors_torch_compiled = {
+        "q": torch.abs(dq_flash - dq_torch_compiled).max().item(),
+        "k": torch.abs(dk_flash - dk_torch_compiled).max().item(),
+        "v": torch.abs(dv_flash - dv_torch_compiled).max().item(),
+        "bias": torch.abs(dbias_flash - dbias_torch_compiled).max().item(),
+    }
+
+    # Compute max gradient errors against xformers implementation
+    max_grad_errors_xformers = {
+        "q": torch.abs(dq_flash - dq_torch_xformers).max().item(),
+        "k": torch.abs(dk_flash - dk_torch_xformers).max().item(),
+        "v": torch.abs(dv_flash - dv_torch_xformers).max().item(),
+        "bias": torch.abs(dbias_flash - dbias_torch_xformers).max().item(),
+    }
+
     # Compute max gradient errors against SDPA implementation
     max_grad_errors_sdpa = {
         "q": torch.abs(dq_flash - dq_sdpa).max().item(),
@@ -197,10 +274,22 @@ def test_attention_correctness():
 
     # Print max errors
     print(f"✅ Max Forward Error vs Torch: {max_forward_error_torch:.6e}")
+    print(f"✅ Max Forward Error vs Torch Compiled: {max_forward_error_torch_compiled:.6e}")
+    print(f"✅ Max Forward Error vs xFormers: {max_forward_error_xformers:.6e}")
     print(f"✅ Max Forward Error vs SDPA: {max_forward_error_sdpa:.6e}")
+
     print(f"✅ Max Gradient Errors vs Torch:")
     for param, err in max_grad_errors_torch.items():
         print(f"   {param.upper()} : {err:.6e}")
+
+    print(f"✅ Max Gradient Errors vs Torch Compiled:")
+    for param, err in max_grad_errors_torch_compiled.items():
+        print(f"   {param.upper()} : {err:.6e}")
+
+    print(f"✅ Max Gradient Errors vs xFormers:")
+    for param, err in max_grad_errors_xformers.items():
+        print(f"   {param.upper()} : {err:.6e}")
+
     print(f"✅ Max Gradient Errors vs SDPA:")
     for param, err in max_grad_errors_sdpa.items():
         print(f"   {param.upper()} : {err:.6e}")
