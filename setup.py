@@ -10,6 +10,7 @@ setup(
     install_requires=[
         "torch>=2.0.0",
         "triton>=2.0.0",
+        "xformers",
     ],
     python_requires=">=3.8",
-) 
+)
