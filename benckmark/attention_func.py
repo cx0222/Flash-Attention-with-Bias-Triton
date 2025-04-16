@@ -1,5 +1,5 @@
 """
-Attention functions for triton, torch torch-compiled, xformers, and sdpa
+Attention functions for triton, torch torch-compile, xformers, and sdpa
 
 Refactor from the original project from [https://github.com/pengzhangzhi]
 
@@ -46,9 +46,9 @@ def attention_torch(q, k, v, softmax_scale, bias=None):
 
 
 @torch.compile
-def attention_torch_compiled(q, k, v, softmax_scale, bias=None):
+def attention_torch_compile(q, k, v, softmax_scale, bias=None):
     """
-    Implements torch compiled scaled dot-product attention using PyTorch.
+    Implements torch compile scaled dot-product attention using PyTorch.
 
     Author:
         Xuan Chen (Apr 15, 2025), referenced from: attention_torch()
@@ -88,7 +88,7 @@ def attention_torch_compiled(q, k, v, softmax_scale, bias=None):
 
 def attention_xformers(q, k, v, softmax_scale, bias=None):
     """
-    Implements torch compiled scaled dot-product attention using xFormers.
+    Implements torch compile scaled dot-product attention using xFormers.
 
     Args:
         q: Query tensor of shape (batch_size, seqlen_q, nheads, headdim)

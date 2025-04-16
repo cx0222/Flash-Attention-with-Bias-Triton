@@ -54,7 +54,13 @@ import torch
 import triton
 import triton.language as tl
 
-from config import configs
+configs = [
+    triton.Config({"BLOCK_M": BM, "BLOCK_N": BN}, num_stages=s, num_warps=w)
+    for BM in [32, 64, 128]
+    for BN in [32, 64, 128]
+    for s in ([1, 2])
+    for w in [4, 8]
+]
 
 
 def keep(conf):
