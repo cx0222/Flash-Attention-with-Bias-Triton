@@ -1116,3 +1116,8 @@ class FlashAttnFunc(torch.autograd.Function):
                 softmax_scale=ctx.softmax_scale,
             )
         return dq, dk, dv, db, None, None
+
+
+from flash_attn_w_bias import FlashAttnFunc
+
+attention_with_bias = FlashAttnFunc.apply
