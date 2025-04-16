@@ -41,7 +41,7 @@ v = torch.randn_like(q)
 bias = torch.randn(batch_size, n_heads, seq_len, seq_len, device='cuda', dtype=torch.float16)
 
 # Run Flash Attention
-output = attention_triton(q, k, v, bias, causal=False)
+output = attention_triton(q, k, v, bias, False)
 ```
 
 ## Performance
